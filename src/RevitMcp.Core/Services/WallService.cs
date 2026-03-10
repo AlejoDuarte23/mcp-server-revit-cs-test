@@ -11,6 +11,7 @@ public sealed class WallService
             .Cast<Wall>()
             .Select(w => new
             {
+                // Use .Value for all Revit versions (IntegerValue is deprecated in 2024+)
                 Id = w.Id.Value,
                 Name = w.Name,
                 Category = w.Category?.Name

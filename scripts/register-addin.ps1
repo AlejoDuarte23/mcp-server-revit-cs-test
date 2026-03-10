@@ -3,7 +3,7 @@ param(
     [ValidateSet("Debug", "Release")]
     [string]$Configuration = "Debug",
 
-    [ValidateSet("2025", "2026")]
+    [ValidateSet("2024", "2025", "2026")]
     [string]$RevitVersion = "2026",
 
     [ValidateSet("CurrentUser", "AllUsers")]
@@ -22,7 +22,8 @@ if (-not (Test-Path $manifestTemplatePath)) {
 }
 
 if (-not $AssemblyPath) {
-    $AssemblyPath = Join-Path $repoRoot "src/RevitMcp.RevitAddin/bin/$Configuration/net8.0-windows/RevitMcp.RevitAddin.dll"
+    $tfm = if ($RevitVersion -eq "2024") { "net48" } else { "net8.0-windows" }
+    $AssemblyPath = Join-Path $repoRoot "src/RevitMcp.RevitAddin/bin/$Configuration/$tfm/RevitMcp.RevitAddin.dll"
 }
 
 if (-not (Test-Path $AssemblyPath)) {
