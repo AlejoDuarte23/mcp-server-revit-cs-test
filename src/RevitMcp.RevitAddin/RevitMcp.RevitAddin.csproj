@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <AssemblyName>RevitMcp.RevitAddin</AssemblyName>
+    <RootNamespace>RevitMcp.RevitAddin</RootNamespace>
+    <RevitVersion Condition="'$(RevitVersion)' == ''">2026</RevitVersion>
+    <RevitInstallDir Condition="'$(RevitInstallDir)' == ''">C:\Program Files\Autodesk\Revit $(RevitVersion)</RevitInstallDir>
+  </PropertyGroup>
+
+  <Target Name="EnsureRevitInstallDir" BeforeTargets="ResolveReferences">
+    <Error Condition="!Exists('$(RevitInstallDir)\RevitAPI.dll')" Text="RevitAPI.dll was not found. Build with /p:RevitInstallDir=&quot;C:\Program Files\Autodesk\Revit 2025&quot; or /p:RevitVersion=2026." />
+    <Error Condition="!Exists('$(RevitInstallDir)\RevitAPIUI.dll')" Text="RevitAPIUI.dll was not found. Build with /p:RevitInstallDir=&quot;C:\Program Files\Autodesk\Revit 2025&quot; or /p:RevitVersion=2026." />
+  </Target>
+
+  <ItemGroup>
+    <ProjectReference Include="..\RevitMcp.Contracts\RevitMcp.Contracts.csproj" />
+    <ProjectReference Include="..\RevitMcp.Core\RevitMcp.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="RevitAPI">
+      <HintPath>$(RevitInstallDir)\RevitAPI.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="RevitAPIUI">
+      <HintPath>$(RevitInstallDir)\RevitAPIUI.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+</Project>
+
