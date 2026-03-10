@@ -4,6 +4,8 @@ This repository scaffolds an integration that keeps all Autodesk Revit API code 
 
 The outer server speaks MCP over Streamable HTTP. The bridge and Revit-side handlers remain separate so the Revit API only executes inside Revit.
 
+![Revit MCP Demo](assets/image.png)
+
 ## What Is In The Repo
 
 ```text
