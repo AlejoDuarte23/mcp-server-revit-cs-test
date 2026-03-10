@@ -3,7 +3,7 @@ param(
     [ValidateSet("Debug", "Release")]
     [string]$Configuration = "Debug",
 
-    [ValidateSet("2025", "2026")]
+    [ValidateSet("2024", "2025", "2026")]
     [string]$RevitVersion = "2026",
 
     [string]$RevitInstallDir,
@@ -75,7 +75,8 @@ if ($RegisterAddin) {
     )
 
     if ($RevitInstallDir) {
-        $registerArgs += @("-AssemblyPath", (Join-Path $repoRoot "src/RevitMcp.RevitAddin/bin/$Configuration/net8.0-windows/RevitMcp.RevitAddin.dll"))
+        $tfm = if ($RevitVersion -eq "2024") { "net48" } else { "net8.0-windows" }
+        $registerArgs += @("-AssemblyPath", (Join-Path $repoRoot "src/RevitMcp.RevitAddin/bin/$Configuration/$tfm/RevitMcp.RevitAddin.dll"))
     }
 
     & $registerScript @registerArgs
@@ -84,8 +85,10 @@ if ($RegisterAddin) {
     }
 }
 
+$tfm = if ($RevitVersion -eq "2024") { "net48" } else { "net8.0-windows" }
+
 Write-Host ""
 Write-Host "Build completed successfully." -ForegroundColor Green
 Write-Host "Server DLL output: $(Join-Path $repoRoot "src/RevitMcp.Server/bin/$Configuration/net8.0")"
-Write-Host "Add-in DLL output: $(Join-Path $repoRoot "src/RevitMcp.RevitAddin/bin/$Configuration/net8.0-windows")"
+Write-Host "Add-in DLL output: $(Join-Path $repoRoot "src/RevitMcp.RevitAddin/bin/$Configuration/$tfm")"
 

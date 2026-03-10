@@ -51,28 +51,25 @@ Because of that:
 
 That last point matters. A naive HTTP listener thread cannot safely read or modify the active Revit document.
 
-## Supported Starting Point
+## Supported Revit Versions
 
-Use these versions first:
+This project supports:
 
-- Revit 2025
-- Revit 2026
+- **Revit 2024** (.NET Framework 4.8)
+- **Revit 2025** (.NET 8)
+- **Revit 2026** (.NET 8)
 
-Those versions are the cleanest starting point for a new integration because Autodesk moved Revit 2025 add-ins to the modern `.NET 8` runtime model.
+The project files automatically select the correct target framework based on the `RevitVersion` build parameter. Revit 2025+ uses the modern .NET 8 runtime, while Revit 2024 uses .NET Framework 4.8.
 
 ## Prerequisites
 
 You need these on the machine where you will compile and run the add-in:
 
 - Windows 10 or Windows 11
-- Autodesk Revit 2025 or Autodesk Revit 2026
-- .NET 8 SDK
-- Visual Studio 2022 or another MSBuild-capable environment for .NET 8
-
-Important:
-
-- This repository was scaffolded in a workspace where `dotnet` is not installed.
-- The file structure and project wiring are in place, but I could not run `dotnet restore` or `dotnet build` here.
+- Autodesk Revit 2024, 2025, or 2026
+- .NET 8 SDK (required even for Revit 2024 builds, as the server project uses .NET 8)
+- Visual Studio 2022 or another MSBuild-capable environment
+- .NET Framework 4.8 Developer Pack (only required for Revit 2024 builds)
 
 ## Revit References Required To Compile
 
@@ -90,6 +87,7 @@ For `RevitMcp.Core`:
 Typical install folders:
 
 ```powershell
+C:\Program Files\Autodesk\Revit 2024\
 C:\Program Files\Autodesk\Revit 2025\
 C:\Program Files\Autodesk\Revit 2026\
 ```
@@ -99,6 +97,7 @@ The `.csproj` files already support either of these approaches:
 1. Build by version:
 
 ```powershell
+dotnet build .\RevitMcp.sln /p:RevitVersion=2024
 dotnet build .\RevitMcp.sln /p:RevitVersion=2025
 dotnet build .\RevitMcp.sln /p:RevitVersion=2026
 ```
@@ -106,7 +105,7 @@ dotnet build .\RevitMcp.sln /p:RevitVersion=2026
 2. Build by explicit install folder:
 
 ```powershell
-dotnet build .\RevitMcp.sln /p:RevitInstallDir="C:\Program Files\Autodesk\Revit 2026"
+dotnet build .\RevitMcp.sln /p:RevitInstallDir="C:\Program Files\Autodesk\Revit 2024"
 ```
 
 If the DLLs are not found, the Revit projects fail early with a clear MSBuild error.
@@ -144,6 +143,7 @@ Revit discovers add-ins through `.addin` manifest files.
 Per-user registration folders:
 
 ```text
+%AppData%\Autodesk\Revit\Addins\2024\
 %AppData%\Autodesk\Revit\Addins\2025\
 %AppData%\Autodesk\Revit\Addins\2026\
 ```
@@ -151,6 +151,7 @@ Per-user registration folders:
 All-users registration folders:
 
 ```text
+%ProgramData%\Autodesk\Revit\Addins\2024\
 %ProgramData%\Autodesk\Revit\Addins\2025\
 %ProgramData%\Autodesk\Revit\Addins\2026\
 ```
@@ -181,25 +182,29 @@ Build the whole solution:
 Build and register the add-in manifest for the current user:
 
 ```powershell
+# For Revit 2024
+.\scripts\build-all.ps1 -RevitVersion 2024 -Configuration Debug -RegisterAddin
+
+# For Revit 2026
 .\scripts\build-all.ps1 -RevitVersion 2026 -Configuration Debug -RegisterAddin
 ```
 
 Build against a custom Revit installation folder:
 
 ```powershell
-.\scripts\build-all.ps1 -RevitVersion 2025 -RevitInstallDir "D:\Apps\Autodesk\Revit 2025"
+.\scripts\build-all.ps1 -RevitVersion 2024 -RevitInstallDir "D:\Apps\Autodesk\Revit 2024"
 ```
 
 Register the manifest separately after a build:
 
 ```powershell
-.\scripts\register-addin.ps1 -RevitVersion 2026 -Configuration Debug -Scope CurrentUser
+.\scripts\register-addin.ps1 -RevitVersion 2024 -Configuration Debug -Scope CurrentUser
 ```
 
 For machine-wide registration:
 
 ```powershell
-.\scripts\register-addin.ps1 -RevitVersion 2026 -Configuration Release -Scope AllUsers
+.\scripts\register-addin.ps1 -RevitVersion 2024 -Configuration Release -Scope AllUsers
 ```
 
 ## Manual Build And Run
@@ -207,6 +212,10 @@ For machine-wide registration:
 ### 1. Build The Revit Add-In
 
 ```powershell
+# For Revit 2024 (builds against .NET Framework 4.8)
+dotnet build .\src\RevitMcp.RevitAddin\RevitMcp.RevitAddin.csproj -c Debug /p:RevitVersion=2024
+
+# For Revit 2026 (builds against .NET 8)
 dotnet build .\src\RevitMcp.RevitAddin\RevitMcp.RevitAddin.csproj -c Debug /p:RevitVersion=2026
 ```
 
@@ -216,7 +225,7 @@ Copy `src\RevitMcp.RevitAddin\Manifest\RevitMcp.RevitAddin.addin` into the match
 
 ### 3. Start Revit
 
-Launch Revit 2025 or 2026 and open any project.
+Launch Revit 2024, 2025, or 2026 (whichever version you built for) and open any project.
 
 When Revit finishes initialization, the add-in starts a local bridge listener at:
 

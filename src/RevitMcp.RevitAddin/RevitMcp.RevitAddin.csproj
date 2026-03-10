@@ -1,11 +1,14 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>net8.0-windows</TargetFramework>
-    <EnableWindowsTargeting>true</EnableWindowsTargeting>
     <AssemblyName>RevitMcp.RevitAddin</AssemblyName>
     <RootNamespace>RevitMcp.RevitAddin</RootNamespace>
     <RevitVersion Condition="'$(RevitVersion)' == ''">2026</RevitVersion>
     <RevitInstallDir Condition="'$(RevitInstallDir)' == ''">C:\Program Files\Autodesk\Revit $(RevitVersion)</RevitInstallDir>
+
+    <!-- Revit 2024 uses .NET Framework 4.8, 2025+ uses .NET 8 -->
+    <TargetFramework Condition="'$(RevitVersion)' == '2024'">net48</TargetFramework>
+    <TargetFramework Condition="'$(RevitVersion)' != '2024'">net8.0-windows</TargetFramework>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
   </PropertyGroup>
 
   <Target Name="EnsureRevitInstallDir" BeforeTargets="ResolveReferences">
