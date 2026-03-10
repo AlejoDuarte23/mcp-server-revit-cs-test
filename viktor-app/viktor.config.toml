@@ -1,5 +1,5 @@
 app_type = "simple"
 python_version = "3.13"
-registered_name = "revit-mcp-agent"
+registered_name = "revit-mcp-cs-tool-test"
 assets_path = "assets"
 
