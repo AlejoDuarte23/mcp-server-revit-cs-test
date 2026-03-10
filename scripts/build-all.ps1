@@ -29,9 +29,14 @@ function Assert-Command {
 
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 $solutionPath = Join-Path $repoRoot "RevitMcp.sln"
+$serverProjectPath = Join-Path $repoRoot "src/RevitMcp.Server/RevitMcp.Server.csproj"
 
 if (-not (Test-Path $solutionPath)) {
     throw "Solution file not found at $solutionPath"
+}
+
+if (-not (Test-Path $serverProjectPath)) {
+    throw "Server project file not found at $serverProjectPath"
 }
 
 Assert-Command -Name "dotnet"
@@ -86,9 +91,10 @@ if ($RegisterAddin) {
 }
 
 $tfm = if ($RevitVersion -eq "2024") { "net48" } else { "net8.0-windows" }
+$serverProjectXml = [xml](Get-Content -Raw -Path $serverProjectPath)
+$serverTargetFramework = $serverProjectXml.Project.PropertyGroup.TargetFramework | Select-Object -First 1
 
 Write-Host ""
 Write-Host "Build completed successfully." -ForegroundColor Green
-Write-Host "Server DLL output: $(Join-Path $repoRoot "src/RevitMcp.Server/bin/$Configuration/net8.0")"
+Write-Host "Server DLL output: $(Join-Path $repoRoot "src/RevitMcp.Server/bin/$Configuration/$serverTargetFramework")"
 Write-Host "Add-in DLL output: $(Join-Path $repoRoot "src/RevitMcp.RevitAddin/bin/$Configuration/$tfm")"
-

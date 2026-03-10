@@ -18,24 +18,20 @@ builder.Services.AddSingleton(sp =>
     var httpClientFactory = sp.GetRequiredService<IHttpClientFactory>();
     return new BridgeClient(httpClientFactory.CreateClient(), bridgeUrl);
 });
-builder.Services.AddSingleton<RevitTools>();
+builder.Services
+    .AddMcpServer()
+    .WithHttpTransport()
+    .WithTools<RevitTools>();
 
 var app = builder.Build();
 
 app.MapGet("/", () => Results.Ok(new
 {
-    Name = "Revit MCP demo server",
+    Name = "Revit MCP server",
     Bridge = bridgeUrl,
-    Endpoints = new[]
-    {
-        "/tools/ping",
-        "/tools/get_active_document",
-        "/tools/list_walls"
-    }
+    McpEndpoint = "/mcp"
 }));
 
-app.MapGet("/tools/ping", async (RevitTools tools, CancellationToken ct) => Results.Ok(await tools.Ping(ct)));
-app.MapGet("/tools/get_active_document", async (RevitTools tools, CancellationToken ct) => Results.Ok(await tools.GetActiveDocument(ct)));
-app.MapGet("/tools/list_walls", async (RevitTools tools, CancellationToken ct) => Results.Ok(await tools.ListWalls(ct)));
+app.MapMcp("/mcp");
 
 app.Run(serverUrl);

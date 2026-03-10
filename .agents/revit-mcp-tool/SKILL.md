@@ -31,8 +31,8 @@ Add a new tool without breaking the execution boundary:
 2. `BridgeRequestBroker` raises an `ExternalEvent`.
 3. `CommandDispatcher` looks up the handler by tool name.
 4. The handler executes and returns a serializable result.
-5. `RevitMcp.Server/Tools/RevitTools.cs` exposes a thin method that calls `BridgeClient`.
-6. `RevitMcp.Server/Program.cs` exposes the current demo HTTP endpoint.
+5. `RevitMcp.Server/Tools/RevitTools.cs` exposes MCP tool methods that call `BridgeClient`.
+6. `RevitMcp.Server/Program.cs` exposes the Streamable HTTP MCP endpoint.
 
 ## Standard workflow for a new tool
 
@@ -43,8 +43,8 @@ Add a new tool without breaking the execution boundary:
 3. Add or extend a service under `src/RevitMcp.Core/Services/` for the Revit-side logic.
 4. Add a handler under `src/RevitMcp.RevitAddin/Handlers/`.
 5. Register the handler in `src/RevitMcp.RevitAddin/App.cs`.
-6. Add a thin method in `src/RevitMcp.Server/Tools/RevitTools.cs`.
-7. Add an endpoint in `src/RevitMcp.Server/Program.cs`.
+6. Add an MCP tool method in `src/RevitMcp.Server/Tools/RevitTools.cs`.
+7. Ensure the tool class is registered with the MCP server in `src/RevitMcp.Server/Program.cs`.
 8. Update `README.md` if the public tool list changed.
 
 ### Write tool
@@ -80,12 +80,14 @@ public sealed class ListLevelsHandler : IRevitCommandHandler
 }
 ```
 
-## Server method template
+## MCP tool method template
 
 ```csharp
-public async Task<object> ListLevels(CancellationToken cancellationToken = default)
+[McpServerTool(Name = "list_levels", ReadOnly = true, Idempotent = true, Destructive = false)]
+[Description("List levels from the active Revit document.")]
+public static async Task<object> ListLevels(BridgeClient bridge, CancellationToken cancellationToken = default)
 {
-    var response = await _bridge.InvokeAsync("list_levels", new { }, cancellationToken);
+    var response = await bridge.InvokeAsync("list_levels", new { }, cancellationToken);
     if (!response.Success)
     {
         throw new InvalidOperationException(response.Error);
@@ -95,11 +97,15 @@ public async Task<object> ListLevels(CancellationToken cancellationToken = defau
 }
 ```
 
-## HTTP endpoint template
+## MCP server registration template
 
 ```csharp
-app.MapGet("/tools/list_levels", async (RevitTools tools, CancellationToken ct) =>
-    Results.Ok(await tools.ListLevels(ct)));
+builder.Services
+    .AddMcpServer()
+    .WithHttpTransport()
+    .WithTools<RevitTools>();
+
+app.MapMcp("/mcp");
 ```
 
 ## Where to edit
@@ -110,7 +116,7 @@ app.MapGet("/tools/list_levels", async (RevitTools tools, CancellationToken ct) 
 - Revit handlers: `src/RevitMcp.RevitAddin/Handlers/`
 - Bridge client: `src/RevitMcp.Server/BridgeClient.cs`
 - Tool surface: `src/RevitMcp.Server/Tools/RevitTools.cs`
-- Demo endpoints: `src/RevitMcp.Server/Program.cs`
+- MCP hosting: `src/RevitMcp.Server/Program.cs`
 
 ## Versioning and targeting notes
 
@@ -129,9 +135,8 @@ app.MapGet("/tools/list_levels", async (RevitTools tools, CancellationToken ct) 
 ## Validation checklist
 
 - Handler is registered in `App.cs`
-- Tool name matches in handler, server method, and endpoint
+- Tool name matches in handler and MCP tool method
 - Result is serializable
 - No Revit API usage leaked into `RevitMcp.Server`
 - Write operations use `Transaction`
 - `README.md` reflects new externally visible tools
-
