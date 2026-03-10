@@ -1,0 +1,5 @@
+interface:
+  display_name: "Revit MCP Tool"
+  short_description: "Add or update Revit MCP tools in this repo."
+  default_prompt: "Use $revit-mcp-tool to add or update a Revit MCP server tool in this repository."
+
