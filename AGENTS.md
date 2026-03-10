@@ -49,11 +49,11 @@ This repository is a demo bridge between Autodesk Revit and an external tool sur
 - Keep the server surface thin; it should only validate input and forward calls through `BridgeClient`.
 - Update `README.md` when endpoints, ports, manifest instructions, or prerequisites change.
 
-## Current Demo Boundary
+## Current MCP Boundary
 
-- The current `RevitMcp.Server` project is an HTTP demo server, not a production MCP stdio server yet.
-- If you replace it with a real MCP transport later, preserve the existing boundary:
-  - external server
+- `RevitMcp.Server` is the MCP-facing server and should expose tools over Streamable HTTP.
+- Preserve the existing boundary:
+  - MCP server
   - local bridge
   - Revit add-in
 
@@ -127,11 +127,10 @@ This repository is a demo bridge between Autodesk Revit and an external tool sur
 9. **Startup Sequence**
    - Start Revit first and open a project
    - The add-in starts its bridge on `http://127.0.0.1:5057/` after Revit initializes
-   - Then start the demo server on `http://127.0.0.1:5099`
-   - Test with curl: `ping`, `get_active_document`, `list_walls`
+   - Then start the MCP server on `http://127.0.0.1:5099`
+   - Connect clients to the Streamable HTTP endpoint at `http://127.0.0.1:5099/mcp`
 
 10. **Troubleshooting**
     - Check Revit Journal files at `%AppData%\Autodesk\Revit\{version}\Journals\` for add-in load errors
     - If `HttpListener` access denied: run `netsh http add urlacl url=http://127.0.0.1:5057/ user=%USERNAME%` in elevated PowerShell
     - Verify manifest registered in correct Revit version folder
-

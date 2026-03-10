@@ -1,8 +1,8 @@
-# Revit MCP Demo Project
+# Revit MCP Project
 
-This repository scaffolds a demo integration that keeps all Autodesk Revit API code inside a normal Revit add-in and exposes a small external tool surface through a local bridge.
+This repository scaffolds an integration that keeps all Autodesk Revit API code inside a normal Revit add-in and exposes tools through a local MCP server.
 
-The current server project is an HTTP demo surface. It proves the bridge and handler model first. Swapping the outer layer to a real MCP stdio server later should not require changing the Revit-side command handlers.
+The outer server speaks MCP over Streamable HTTP. The bridge and Revit-side handlers remain separate so the Revit API only executes inside Revit.
 
 ## What Is In The Repo
 
@@ -46,7 +46,7 @@ Revit API code must run inside the Revit process and on Revit-controlled executi
 Because of that:
 
 - `RevitMcp.RevitAddin` owns every Revit API call.
-- `RevitMcp.Server` stays outside Revit and forwards requests only.
+- `RevitMcp.Server` stays outside Revit and exposes MCP tools only.
 - `BridgeRequestBroker` marshals incoming bridge calls through Revit `ExternalEvent` instead of calling the API directly from the listener thread.
 
 That last point matters. A naive HTTP listener thread cannot safely read or modify the active Revit document.
@@ -67,7 +67,7 @@ You need these on the machine where you will compile and run the add-in:
 
 - Windows 10 or Windows 11
 - Autodesk Revit 2024, 2025, or 2026
-- .NET 8 SDK (required even for Revit 2024 builds, as the server project uses .NET 8)
+- .NET 10 SDK for the current server project target
 - Visual Studio 2022 or another MSBuild-capable environment
 - .NET Framework 4.8 Developer Pack (only required for Revit 2024 builds)
 
@@ -128,13 +128,12 @@ Current dependency shape:
   - direct `Reference` to `RevitAPI.dll`
 - `RevitMcp.Server.csproj`
   - `ProjectReference` to `RevitMcp.Contracts`
+  - `PackageReference` to `ModelContextProtocol`
+  - `PackageReference` to `ModelContextProtocol.AspNetCore`
 - `RevitMcp.Contracts.csproj`
-  - no extra external dependencies right now
+  - `PackageReference` to `System.Text.Json`
 
-There are currently no explicit NuGet `PackageReference` entries because:
-
-- the server uses the shared ASP.NET Core framework from `Microsoft.NET.Sdk.Web`
-- the Revit projects use direct DLL references from the local Revit installation
+The Revit projects still use direct DLL references from the local Revit installation, while the server uses NuGet packages for MCP hosting.
 
 ## Where To Register The Add-In
 
@@ -233,28 +232,38 @@ When Revit finishes initialization, the add-in starts a local bridge listener at
 http://127.0.0.1:5057/
 ```
 
-### 4. Build And Run The Demo Server
+### 4. Build And Run The MCP Server
 
 ```powershell
 dotnet build .\src\RevitMcp.Server\RevitMcp.Server.csproj -c Debug
 dotnet run --project .\src\RevitMcp.Server\RevitMcp.Server.csproj
 ```
 
-The demo server listens on:
+The MCP server listens on:
 
 ```text
 http://127.0.0.1:5099
 ```
 
-### 5. Test The Demo Endpoints
+### 5. Connect An MCP Client
 
-```powershell
-curl http://127.0.0.1:5099/tools/ping
-curl http://127.0.0.1:5099/tools/get_active_document
-curl http://127.0.0.1:5099/tools/list_walls
+Streamable HTTP endpoint:
+
+```text
+http://127.0.0.1:5099/mcp
 ```
 
-## Demo Tool Set
+Smoke-test the MCP endpoint with the included script:
+
+```powershell
+pip install mcp
+python .\scripts\test-mcp-server.py
+python .\scripts\test-mcp-server.py --tool ping
+python .\scripts\test-mcp-server.py --tool get_active_document
+python .\scripts\test-mcp-server.py --tool list_walls
+```
+
+## Initial Tool Set
 
 The scaffold includes three read-only tools:
 
@@ -289,17 +298,15 @@ Depending on the Windows machine policy, `HttpListener` may require a URL ACL re
 netsh http add urlacl url=http://127.0.0.1:5057/ user=%USERNAME%
 ```
 
-## Notes About Real MCP Integration
+## Notes About The MCP Server
 
-This repository currently stops at the bridge demo layer.
+The outer server already exposes a real MCP surface over Streamable HTTP.
 
-To turn the outer server into a real MCP server later:
+That means:
 
-1. Keep `RevitMcp.Contracts`, `RevitMcp.Core`, and `RevitMcp.RevitAddin` as they are.
-2. Replace the HTTP demo endpoints in `RevitMcp.Server/Program.cs` with a real MCP transport.
-3. Keep the tool surface thin so it still calls `BridgeClient.InvokeAsync(...)`.
-
-If you later add a real stdio MCP server, that executable is what you would register with your MCP client. The Revit add-in itself is registered only through the Revit `.addin` manifest.
+1. MCP clients can discover tools from the protocol.
+2. The C# server remains a thin wrapper around `BridgeClient`.
+3. The Revit add-in is still registered only through the Revit `.addin` manifest.
 
 ## Write Operations
 
@@ -325,7 +332,7 @@ using (var tx = new Transaction(doc, "Create Demo Wall"))
 - add `list_rooms`
 - add `list_sheets`
 - add one safe write operation behind a transaction
-- replace the HTTP demo surface with a real MCP transport if needed
+- add more MCP tools as needed
 
 ## Reference Links
 
