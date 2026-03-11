@@ -14,10 +14,13 @@
   </Target>
 
   <ItemGroup>
+    <ProjectReference Include="..\RevitMcp.Contracts\RevitMcp.Contracts.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Reference Include="RevitAPI">
       <HintPath>$(RevitInstallDir)\RevitAPI.dll</HintPath>
       <Private>false</Private>
     </Reference>
   </ItemGroup>
 </Project>
-

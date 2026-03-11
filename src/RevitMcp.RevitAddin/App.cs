@@ -36,7 +36,8 @@ public sealed class App : IExternalApplication
         {
             new PingHandler(),
             new GetActiveDocumentHandler(),
-            new ListWallsHandler()
+            new ListWallsHandler(),
+            new GetHvacCriticalPathDataHandler()
         });
 
         _broker = new BridgeRequestBroker(dispatcher);
@@ -44,4 +45,3 @@ public sealed class App : IExternalApplication
         Bridge.Start("http://127.0.0.1:5057/");
     }
 }
-

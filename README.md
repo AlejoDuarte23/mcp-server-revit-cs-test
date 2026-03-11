@@ -263,15 +263,17 @@ python .\scripts\test-mcp-server.py
 python .\scripts\test-mcp-server.py --tool ping
 python .\scripts\test-mcp-server.py --tool get_active_document
 python .\scripts\test-mcp-server.py --tool list_walls
+python .\scripts\test-mcp-server.py --tool get_hvac_critical_path_data --arguments "{\"elementId\":123456}"
 ```
 
 ## Initial Tool Set
 
-The scaffold includes three read-only tools:
+The scaffold includes four read-only tools:
 
 - `ping`
 - `get_active_document`
 - `list_walls`
+- `get_hvac_critical_path_data`
 
 That is enough to prove:
 
@@ -279,6 +281,24 @@ That is enough to prove:
 - the bridge is reachable
 - the request is marshaled back into Revit safely
 - data can be returned from the active document
+
+### HVAC Critical Path Export
+
+`get_hvac_critical_path_data` resolves a `MechanicalSystem` from either:
+
+- `systemId`
+- `elementId`
+
+The tool validates that the system is well connected and then returns a JSON-safe payload with:
+
+- system id and name
+- `PressureLossOfCriticalPath`
+- ordered critical-path sections with section sequence, flow, velocity, and member element ids
+- per-element rows for ducts, flex ducts, fittings, accessories, and terminals on the critical path
+- type metadata and basic geometry such as length, diameter, width, and height
+- a primary connector profile snapshot for fitting-style elements
+
+This tool is intended as the Revit-side export layer for external HVAC analysis. The follow-up calculation and report generation can happen outside Revit, for example in Python or VIKTOR. Writing values, flags, or heatmap overrides back into Revit should remain a separate tool because those operations are transactional.
 
 ## Notes About The Bridge
 
