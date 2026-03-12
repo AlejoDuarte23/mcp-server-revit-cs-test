@@ -7,6 +7,8 @@ namespace RevitMcp.RevitAddin.Bridge;
 
 internal sealed class LocalHttpBridge : IDisposable
 {
+    private static readonly TimeSpan RequestTimeout = TimeSpan.FromSeconds(15);
+
     private readonly BridgeRequestBroker _broker;
     private readonly JsonSerializerOptions _jsonOptions = new(JsonSerializerDefaults.Web);
 
@@ -62,41 +64,93 @@ internal sealed class LocalHttpBridge : IDisposable
 
     private async Task HandleAsync(HttpListenerContext context)
     {
-        BridgeResponse response;
-
         try
         {
-            if (context.Request.HttpMethod != "POST")
+            if (string.Equals(context.Request.HttpMethod, "GET", StringComparison.OrdinalIgnoreCase))
+            {
+                context.Response.StatusCode = 200;
+                await WriteJsonAsync(context.Response, new
+                {
+                    Name = "Revit MCP bridge",
+                    Status = "listening",
+                    Method = "POST",
+                    RevitExecution = "ExternalEvent"
+                });
+                return;
+            }
+
+            if (!string.Equals(context.Request.HttpMethod, "POST", StringComparison.OrdinalIgnoreCase))
             {
                 context.Response.StatusCode = 405;
-                response = new BridgeResponse(false, null, "Only POST is supported.");
+                context.Response.Headers["Allow"] = "GET, POST";
+                await WriteJsonAsync(context.Response, new BridgeResponse(false, null, "Only GET and POST are supported."));
+                return;
             }
-            else
-            {
-                var contentEncoding = context.Request.ContentEncoding ?? Encoding.UTF8;
-                using var reader = new StreamReader(context.Request.InputStream, contentEncoding);
-                var body = await reader.ReadToEndAsync();
 
-                var request = JsonSerializer.Deserialize<BridgeRequest>(body, _jsonOptions)
-                    ?? throw new InvalidOperationException("Invalid request.");
+            var contentEncoding = context.Request.ContentEncoding ?? Encoding.UTF8;
+            using var reader = new StreamReader(context.Request.InputStream, contentEncoding);
+            var body = await reader.ReadToEndAsync();
 
-                var result = await _broker.InvokeAsync(request.Tool, request.Arguments);
-                response = new BridgeResponse(true, result, null);
-            }
+            var request = JsonSerializer.Deserialize<BridgeRequest>(body, _jsonOptions)
+                ?? throw new InvalidOperationException("Invalid request.");
+
+            using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(_cts?.Token ?? CancellationToken.None);
+            timeoutCts.CancelAfter(RequestTimeout);
+
+            var result = await _broker.InvokeAsync(request.Tool, request.Arguments, timeoutCts.Token);
+            context.Response.StatusCode = 200;
+            await WriteJsonAsync(context.Response, new BridgeResponse(true, result, null));
+        }
+        catch (JsonException ex)
+        {
+            context.Response.StatusCode = 400;
+            await WriteJsonAsync(context.Response, new BridgeResponse(false, null, $"Invalid JSON request: {ex.Message}"));
+        }
+        catch (OperationCanceledException) when (_cts?.IsCancellationRequested == true)
+        {
+            context.Response.StatusCode = 503;
+            await WriteJsonAsync(context.Response, new BridgeResponse(false, null, "Bridge is shutting down."));
+        }
+        catch (OperationCanceledException)
+        {
+            context.Response.StatusCode = 504;
+            await WriteJsonAsync(context.Response, new BridgeResponse(false, null, $"Bridge request timed out after {RequestTimeout.TotalSeconds:0} seconds while waiting for Revit."));
         }
         catch (Exception ex)
         {
             context.Response.StatusCode = 500;
-            response = new BridgeResponse(false, null, ex.Message);
+            await WriteJsonAsync(context.Response, new BridgeResponse(false, null, ex.Message));
         }
+        finally
+        {
+            try
+            {
+                context.Response.Close();
+            }
+            catch
+            {
+            }
+        }
+    }
 
-        var json = JsonSerializer.Serialize(response, _jsonOptions);
-        var bytes = Encoding.UTF8.GetBytes(json);
+    private async Task WriteJsonAsync(HttpListenerResponse response, object payload)
+    {
+        try
+        {
+            var json = JsonSerializer.Serialize(payload, _jsonOptions);
+            var bytes = Encoding.UTF8.GetBytes(json);
 
-        context.Response.ContentType = "application/json";
-        context.Response.ContentEncoding = Encoding.UTF8;
-        context.Response.ContentLength64 = bytes.Length;
-        await context.Response.OutputStream.WriteAsync(bytes, 0, bytes.Length);
-        context.Response.Close();
+            response.ContentType = "application/json";
+            response.ContentEncoding = Encoding.UTF8;
+            response.ContentLength64 = bytes.Length;
+            response.Headers["Cache-Control"] = "no-store";
+            await response.OutputStream.WriteAsync(bytes, 0, bytes.Length);
+        }
+        catch (HttpListenerException)
+        {
+        }
+        catch (ObjectDisposedException)
+        {
+        }
     }
 }

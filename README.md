@@ -234,6 +234,8 @@ When Revit finishes initialization, the add-in starts a local bridge listener at
 http://127.0.0.1:5057/
 ```
 
+Opening that URL in a browser should return a small JSON health payload immediately. Tool calls still use `POST`.
+
 ### 4. Build And Run The MCP Server
 
 ```powershell
@@ -289,10 +291,15 @@ For a production hardening pass, consider:
 - named pipes instead of HTTP
 - a shared secret or local auth guard
 - structured logging
-- timeouts
 - request validation
 - explicit exception mapping
 - queued execution limits
+
+The current demo bridge already includes:
+
+- a lightweight `GET` health response on `/`
+- request timeouts so stalled Revit calls fail instead of hanging forever
+- queue rescheduling around `ExternalEvent` so requests are not stranded when Revit is already servicing a prior event
 
 Depending on the Windows machine policy, `HttpListener` may require a URL ACL reservation. If needed, run this once in an elevated shell:
 
