@@ -13,20 +13,26 @@ from viktor_tool_base import ViktorTool
 
 
 class DuctElementRow(BaseModel):
-    rank: int = Field(description="Rank by pressure drop.")
-    element_id: int = Field(description="Revit element id.")
-    unique_id: str = Field(description="Revit unique id.")
-    element_name: str = Field(description="Element name or type.")
-    pressure_drop: float = Field(description="Pressure drop in Pa.")
-    flow: float = Field(description="Flow in L/s.")
-    size: str = Field(description="Duct size text.")
-    length: float = Field(description="Element length in mm.")
-    velocity: float = Field(description="Velocity in m/s.")
-    friction: float = Field(description="Friction in Pa/m.")
-    loss_coefficient: float = Field(description="Loss coefficient.")
-    system_name: str = Field(description="MEP system name.")
-    reference_level: str = Field(description="Reference level.")
-    mark: int = Field(description="Element mark.")
+    rank: int = Field(default=1, description="Rank by pressure drop.")
+    element_id: int = Field(default=520209, description="Revit element id.")
+    unique_id: str = Field(
+        default="f056ea9d-8fba-434e-80ce-46b4df0ea740-0007f011",
+        description="Revit unique id.",
+    )
+    element_name: str = Field(
+        default="Mitered Elbows / Taps (Rectangular Duct)",
+        description="Element name or type.",
+    )
+    pressure_drop: float = Field(default=27.2, description="Pressure drop in Pa.")
+    flow: float = Field(default=755.1, description="Flow in L/s.")
+    size: str = Field(default="450 mm x 300 mm", description="Duct size text.")
+    length: float = Field(default=30873.0, description="Element length in mm.")
+    velocity: float = Field(default=5.6, description="Velocity in m/s.")
+    friction: float = Field(default=0.88, description="Friction in Pa/m.")
+    loss_coefficient: float = Field(default=1.443216, description="Loss coefficient.")
+    system_name: str = Field(default="Mechanical Exhaust Air 1", description="MEP system name.")
+    reference_level: str = Field(default="Level 1", description="Reference level.")
+    mark: int = Field(default=1232, description="Element mark.")
 
 
 def _default_rows() -> list[DuctElementRow]:
@@ -103,11 +109,16 @@ class HvacDuctReportInput(BaseModel):
         ),
     )
 
-    @model_validator(mode="after")
-    def ensure_rows(self) -> "HvacDuctReportInput":
-        if not self.elements:
-            raise ValueError("elements must contain at least one row.")
-        return self
+    @model_validator(mode="before")
+    @classmethod
+    def ensure_rows(cls, data: Any) -> Any:
+        if isinstance(data, dict):
+            elements = data.get("elements")
+            if elements is None or elements == []:
+                # Some tool calls send null or [] explicitly.
+                # Fall back to sample rows instead of failing validation.
+                data["elements"] = [row.model_dump() for row in _default_rows()]
+        return data
 
 
 class HvacDuctReportTool(ViktorTool):
