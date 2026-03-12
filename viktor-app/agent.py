@@ -13,6 +13,7 @@ from agents import set_tracing_disabled
 from agents.mcp import MCPServerStreamableHttp
 from openai.types.responses import ResponseTextDeltaEvent
 
+from hvac_duct_report_tool import generate_hvac_duct_pdf_report_tool
 from table_tool import generate_table
 from table_tool import show_hide_table_tool
 
@@ -25,6 +26,7 @@ OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-5-mini")
 TOOL_DISPLAY_NAMES = {
     "generate_table": "Generate Table",
     "show_hide_table": "Show/Hide Table",
+    "generate_hvac_duct_pdf_report": "Generate HVAC Duct PDF Report",
 }
 
 _event_loop: asyncio.AbstractEventLoop | None = None
@@ -92,6 +94,8 @@ def _build_agent(server: MCPServerStreamableHttp) -> Agent:
         "Use MCP tools when possible instead of answering from memory. "
         "Markdown is allowed, but do not use markdown tables. "
         "If you call generate_table, also call show_hide_table with action='show'. "
+        "Use generate_hvac_duct_pdf_report to call the VIKTOR app download method "
+        "for HVAC duct reports (method_name='download_report'). "
         "Do not claim write capabilities unless a real tool is available."
     )
 
@@ -100,7 +104,11 @@ def _build_agent(server: MCPServerStreamableHttp) -> Agent:
         instructions=instructions,
         model=OPENAI_MODEL,
         mcp_servers=[server],
-        tools=[generate_table(), show_hide_table_tool()],
+        tools=[
+            generate_table(),
+            show_hide_table_tool(),
+            generate_hvac_duct_pdf_report_tool(),
+        ],
     )
 
 
