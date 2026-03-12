@@ -50,4 +50,20 @@ public class RevitTools
 
         return response.Result!;
     }
+
+    [McpServerTool(Name = "colorize_duct_pressure_drop", ReadOnly = false, Idempotent = false, Destructive = false, OpenWorld = false)]
+    [Description("Color ducts, flex ducts, and duct fittings in the active view by pressure drop (cold-to-warm gradient) and return the top pressure-drop elements with full properties.")]
+    public async Task<object> ColorizeDuctPressureDrop(
+        [Description("How many top pressure-drop elements to return. Default is 10.")]
+        int topCount = 10,
+        CancellationToken cancellationToken = default)
+    {
+        var response = await _bridge.InvokeAsync("colorize_duct_pressure_drop", new { topCount }, cancellationToken);
+        if (!response.Success)
+        {
+            throw new InvalidOperationException(response.Error);
+        }
+
+        return response.Result!;
+    }
 }

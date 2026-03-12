@@ -18,6 +18,7 @@ src/
     Services/
       DocumentService.cs
       WallService.cs
+      DuctPressureDropService.cs
 
   RevitMcp.RevitAddin/
     App.cs
@@ -31,6 +32,7 @@ src/
       PingHandler.cs
       GetActiveDocumentHandler.cs
       ListWallsHandler.cs
+      ColorizeDuctPressureDropHandler.cs
     Manifest/
       RevitMcp.RevitAddin.addin
 
@@ -263,15 +265,17 @@ python .\scripts\test-mcp-server.py
 python .\scripts\test-mcp-server.py --tool ping
 python .\scripts\test-mcp-server.py --tool get_active_document
 python .\scripts\test-mcp-server.py --tool list_walls
+python .\scripts\test-mcp-server.py --tool colorize_duct_pressure_drop --arguments "{\"topCount\":10}"
 ```
 
 ## Initial Tool Set
 
-The scaffold includes three read-only tools:
+The scaffold includes these tools:
 
 - `ping`
 - `get_active_document`
 - `list_walls`
+- `colorize_duct_pressure_drop` (write tool: applies active-view element overrides)
 
 That is enough to prove:
 
