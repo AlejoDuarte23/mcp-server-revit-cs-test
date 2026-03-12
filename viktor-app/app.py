@@ -3,7 +3,7 @@ import logging
 
 import viktor as vkt
 
-from agent import agent_sync
+from agent import agent_sync_stream
 from table_tool import TableTool
 
 logger = logging.getLogger(__name__)
@@ -57,11 +57,23 @@ class Controller(vkt.Controller):
     def call_llm(self, params, **kwargs) -> vkt.ChatResult | None:
         """Multi-turn conversation between the user and the agent."""
 
+        if not params.chat:
+            return None
+
         conversation_history = params.chat.get_messages()
-        response: str = ""
-        if conversation_history:
-            response = agent_sync(chat_history=conversation_history)
-        return vkt.ChatResult(conversation=params.chat, response=response)
+        if not conversation_history:
+            return None
+
+        chat_history = [
+            {"role": str(message["role"]), "content": str(message["content"])}
+            for message in conversation_history
+        ]
+
+        text_stream = agent_sync_stream(
+            chat_history=chat_history,
+            show_tool_progress=True,
+        )
+        return vkt.ChatResult(params.chat, text_stream)
 
     @vkt.TableView("Table Tool", width=100, visible=get_table_visibility)
     def table_view(self, params, **kwargs) -> vkt.TableResult:
