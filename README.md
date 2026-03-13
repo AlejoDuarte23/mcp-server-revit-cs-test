@@ -266,6 +266,7 @@ python .\scripts\test-mcp-server.py --tool ping
 python .\scripts\test-mcp-server.py --tool get_active_document
 python .\scripts\test-mcp-server.py --tool list_walls
 python .\scripts\test-mcp-server.py --tool colorize_duct_pressure_drop --arguments "{\"topCount\":10}"
+python .\scripts\test-mcp-server.py --tool extract_system_air_elements --arguments "{\"systemName\":\"Mechanical Supply Air 17\"}"
 ```
 
 ## Initial Tool Set
@@ -276,6 +277,7 @@ The scaffold includes these tools:
 - `get_active_document`
 - `list_walls`
 - `colorize_duct_pressure_drop` (write tool: applies active-view element overrides)
+- `extract_system_air_elements` (write tool: colors matching elements blue and exports JSON to local disk)
 
 That is enough to prove:
 

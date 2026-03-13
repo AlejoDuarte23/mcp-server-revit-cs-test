@@ -66,4 +66,22 @@ public class RevitTools
 
         return response.Result!;
     }
+
+    [McpServerTool(Name = "extract_system_air_elements", ReadOnly = false, Idempotent = false, Destructive = false, OpenWorld = false)]
+    [Description("Extract ducts, flex ducts, air terminals, and duct fittings for a given System Name, color them blue in the active view, and save full properties to a local JSON file.")]
+    public async Task<object> ExtractSystemAirElements(
+        [Description("Exact System Name to filter by, e.g. 'Mechanical Supply Air 17'.")]
+        string systemName,
+        [Description("Optional output directory path. If omitted, uses REVIT_MCP_EXPORT_DIR or LocalAppData fallback.")]
+        string? outputDir = null,
+        CancellationToken cancellationToken = default)
+    {
+        var response = await _bridge.InvokeAsync("extract_system_air_elements", new { systemName, outputDir }, cancellationToken);
+        if (!response.Success)
+        {
+            throw new InvalidOperationException(response.Error);
+        }
+
+        return response.Result!;
+    }
 }
