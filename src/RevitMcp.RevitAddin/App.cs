@@ -37,6 +37,7 @@ public sealed class App : IExternalApplication
             new PingHandler(),
             new GetActiveDocumentHandler(),
             new ListWallsHandler(),
+            new ColorElementsByIdHandler(),
             new ColorizeDuctPressureDropHandler(),
             new ExtractSystemAirElementsHandler(),
             new CheckZeroPressureDropFittingsHandler(),

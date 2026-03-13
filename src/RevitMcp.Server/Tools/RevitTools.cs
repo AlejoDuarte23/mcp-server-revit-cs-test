@@ -1,4 +1,5 @@
 using ModelContextProtocol.Server;
+using RevitMcp.Contracts;
 using System.ComponentModel;
 
 namespace RevitMcp.Server.Tools;
@@ -59,6 +60,36 @@ public class RevitTools
         CancellationToken cancellationToken = default)
     {
         var response = await _bridge.InvokeAsync("colorize_duct_pressure_drop", new { topCount }, cancellationToken);
+        if (!response.Success)
+        {
+            throw new InvalidOperationException(response.Error);
+        }
+
+        return response.Result!;
+    }
+
+    [McpServerTool(Name = "color_elements_by_id", ReadOnly = false, Idempotent = false, Destructive = false, OpenWorld = false)]
+    [Description("Apply a caller-provided RGB color override to specific Revit elements in the active view using their Revit element IDs.")]
+    public async Task<object> ColorElementsById(
+        [Description("Revit element IDs to color in the active view.")]
+        IEnumerable<long> elementIds,
+        [Description("Red channel value from 0 to 255.")]
+        byte red,
+        [Description("Green channel value from 0 to 255.")]
+        byte green,
+        [Description("Blue channel value from 0 to 255.")]
+        byte blue,
+        CancellationToken cancellationToken = default)
+    {
+        var request = new ColorElementsByIdRequest
+        {
+            ElementIds = elementIds?.ToList() ?? new List<long>(),
+            Red = red,
+            Green = green,
+            Blue = blue
+        };
+
+        var response = await _bridge.InvokeAsync("color_elements_by_id", request, cancellationToken);
         if (!response.Success)
         {
             throw new InvalidOperationException(response.Error);
