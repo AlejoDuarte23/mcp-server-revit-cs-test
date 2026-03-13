@@ -36,7 +36,15 @@ public sealed class App : IExternalApplication
         {
             new PingHandler(),
             new GetActiveDocumentHandler(),
-            new ListWallsHandler()
+            new ListWallsHandler(),
+            new ColorElementsByIdHandler(),
+            new GetLowVelocityDuctElementsHandler(),
+            new SetDuctDimensionsHandler(),
+            new SetFlexDuctDiameterHandler(),
+            new ColorizeDuctPressureDropHandler(),
+            new ExtractSystemAirElementsHandler(),
+            new CheckZeroPressureDropFittingsHandler(),
+            new SetFittingSpecificCoefficientHandler()
         });
 
         _broker = new BridgeRequestBroker(dispatcher);
@@ -44,4 +52,3 @@ public sealed class App : IExternalApplication
         Bridge.Start("http://127.0.0.1:5057/");
     }
 }
-
