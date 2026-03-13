@@ -267,6 +267,8 @@ python .\scripts\test-mcp-server.py --tool get_active_document
 python .\scripts\test-mcp-server.py --tool list_walls
 python .\scripts\test-mcp-server.py --tool colorize_duct_pressure_drop --arguments "{\"topCount\":10}"
 python .\scripts\test-mcp-server.py --tool extract_system_air_elements --arguments "{\"systemName\":\"Mechanical Supply Air 17\"}"
+python .\scripts\test-mcp-server.py --tool check_zero_pressure_drop_fittings --arguments "{\"systemName\":\"Mechanical Supply Air 17\"}"
+python .\scripts\test-mcp-server.py --tool set_fitting_specific_coefficient --arguments "{\"systemName\":\"Mechanical Supply Air 17\",\"coefficient\":0.2}"
 ```
 
 ## Initial Tool Set
@@ -278,6 +280,8 @@ The scaffold includes these tools:
 - `list_walls`
 - `colorize_duct_pressure_drop` (write tool: applies active-view element overrides)
 - `extract_system_air_elements` (write tool: colors matching elements blue and exports JSON to local disk)
+- `check_zero_pressure_drop_fittings` (write tool: colors zero-pressure fittings and returns element IDs)
+- `set_fitting_specific_coefficient` (write tool: sets fitting loss method to Specific Coefficient, default 0.2)
 
 That is enough to prove:
 

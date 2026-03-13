@@ -84,4 +84,48 @@ public class RevitTools
 
         return response.Result!;
     }
+
+    [McpServerTool(Name = "check_zero_pressure_drop_fittings", ReadOnly = false, Idempotent = false, Destructive = false, OpenWorld = false)]
+    [Description("Find duct fittings in a given system with zero pressure drop, color those fittings in the active view, and return their element IDs.")]
+    public async Task<object> CheckZeroPressureDropFittings(
+        [Description("Exact System Name to filter by, e.g. 'Mechanical Supply Air 17'.")]
+        string systemName,
+        [Description("Tolerance used when checking whether pressure drop is zero. Default is 1e-9.")]
+        double? zeroTolerance = null,
+        CancellationToken cancellationToken = default)
+    {
+        var response = await _bridge.InvokeAsync("check_zero_pressure_drop_fittings", new { systemName, zeroTolerance }, cancellationToken);
+        if (!response.Success)
+        {
+            throw new InvalidOperationException(response.Error);
+        }
+
+        return response.Result!;
+    }
+
+    [McpServerTool(Name = "set_fitting_specific_coefficient", ReadOnly = false, Idempotent = false, Destructive = true, OpenWorld = false)]
+    [Description("Set duct fitting loss method to Specific Coefficient and set coefficient value (default 0.2) for fittings in a given system.")]
+    public async Task<object> SetFittingSpecificCoefficient(
+        [Description("Exact System Name to filter by, e.g. 'Mechanical Supply Air 17'.")]
+        string systemName,
+        [Description("Specific coefficient value to set. Default is 0.2.")]
+        double coefficient = 0.2,
+        [Description("When true (default), apply changes only to zero-pressure fittings in the system.")]
+        bool onlyZeroPressure = true,
+        [Description("Tolerance used when checking whether pressure drop is zero. Default is 1e-9.")]
+        double? zeroTolerance = null,
+        CancellationToken cancellationToken = default)
+    {
+        var response = await _bridge.InvokeAsync(
+            "set_fitting_specific_coefficient",
+            new { systemName, coefficient, onlyZeroPressure, zeroTolerance },
+            cancellationToken);
+
+        if (!response.Success)
+        {
+            throw new InvalidOperationException(response.Error);
+        }
+
+        return response.Result!;
+    }
 }

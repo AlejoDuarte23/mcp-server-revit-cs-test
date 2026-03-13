@@ -38,7 +38,9 @@ public sealed class App : IExternalApplication
             new GetActiveDocumentHandler(),
             new ListWallsHandler(),
             new ColorizeDuctPressureDropHandler(),
-            new ExtractSystemAirElementsHandler()
+            new ExtractSystemAirElementsHandler(),
+            new CheckZeroPressureDropFittingsHandler(),
+            new SetFittingSpecificCoefficientHandler()
         });
 
         _broker = new BridgeRequestBroker(dispatcher);
