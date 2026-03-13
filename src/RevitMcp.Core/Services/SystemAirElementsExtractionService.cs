@@ -28,11 +28,11 @@ public sealed class SystemAirElementsExtractionService
         var elements = new FilteredElementCollector(doc)
             .WhereElementIsNotElementType()
             .WherePasses(new ElementMulticategoryFilter(targetCategoryIds))
-            .Where(e => e is not null)
             .ToList();
 
         var matchingElements = elements
-            .Where(e => string.Equals(GetSystemName(e), normalizedSystemName, StringComparison.OrdinalIgnoreCase))
+            .Where(e => e is not null &&
+                        string.Equals(GetSystemName(e), normalizedSystemName, StringComparison.OrdinalIgnoreCase))
             .ToList();
 
         var coloredCount = 0;
@@ -51,7 +51,7 @@ public sealed class SystemAirElementsExtractionService
         }
 
         var items = matchingElements
-            .Select(e => BuildItem(doc, e))
+            .Select(e => BuildRuleItem(doc, e))
             .ToList();
 
         return new SystemAirElementsExtractionResult
@@ -97,86 +97,56 @@ public sealed class SystemAirElementsExtractionService
         return applied;
     }
 
-    private static SystemAirElementItem BuildItem(Document doc, Element element)
+    private static SystemAirRuleElement BuildRuleItem(Document doc, Element element)
     {
         var elementType = GetElementType(doc, element);
-        return new SystemAirElementItem
+
+        return new SystemAirRuleElement
         {
-            Element = new SystemAirElementIdentity
-            {
-                Id = element.Id.Value,
-                UniqueId = element.UniqueId,
-                Name = element.Name,
-                Class = element.GetType().FullName,
-                Category = element.Category?.Name,
-                CategoryId = element.Category?.Id.Value,
-                TypeId = element.GetTypeId().Value,
-                TypeName = elementType?.Name,
-                SystemName = GetSystemName(element)
-            },
-            Properties = new SystemAirElementProperties
-            {
-                Instance = SerializeParameters(doc, element.Parameters).ToList(),
-                Type = elementType is null
-                    ? new List<SystemAirElementParameter>()
-                    : SerializeParameters(doc, elementType.Parameters).ToList()
-            }
+            ElementId = element.Id.Value,
+            UniqueId = element.UniqueId,
+            Category = element.Category?.Name,
+            Family = GetFamilyName(element, elementType),
+            Type = elementType?.Name ?? element.Name,
+            TypeId = elementType?.Id.Value ?? element.GetTypeId().Value,
+            SystemName = GetSystemName(element),
+            SystemType = GetStringValue(element, elementType, names: new[] { "System Type" }),
+            SystemClassification = GetStringValue(element, elementType, names: new[] { "System Classification" }),
+            Level = GetLevelName(doc, element, elementType),
+            Section = GetIntegerValue(element, elementType, names: new[] { "Section" }),
+            Mark = GetStringValue(element, elementType, builtInParameter: BuiltInParameter.ALL_MODEL_MARK, names: new[] { "Mark" }),
+            Size = GetStringValue(element, elementType, names: new[] { "Size" }),
+            WidthMm = GetLengthInMillimeters(element, elementType, "Width"),
+            HeightMm = GetLengthInMillimeters(element, elementType, "Height"),
+            DiameterMm = GetLengthInMillimeters(element, elementType, "Diameter"),
+            LengthM = GetLengthInMeters(element, elementType, "Length"),
+            FlowLs = GetFlowInLitersPerSecond(element, elementType, "Flow"),
+            VelocityMs = GetVelocityInMetersPerSecond(element, elementType, "Velocity"),
+            FrictionPaPerM = GetFrictionInPascalsPerMeter(element, elementType, "Friction", "Friction Loss"),
+            PressureDropPa = GetPressureInPascals(element, elementType, "Pressure Drop"),
+            LossCoefficient = GetDoubleValue(element, elementType, names: new[] { "Loss Coefficient" }),
+            HydraulicDiameterMm = GetLengthInMillimeters(element, elementType, "Hydraulic Diameter"),
+            ReynoldsNumber = GetDoubleValue(element, elementType, names: new[] { "Reynolds Number" }),
+            LossMethod = GetStringValue(element, elementType, names: new[] { "Loss Method" }),
+            LossMethodSettings = GetStringValue(element, elementType, names: new[] { "Loss Method Settings" }),
+            HostId = GetHostId(element),
+            AngleDeg = GetAngleInDegrees(element, elementType, "Angle")
         };
     }
 
-    private static IEnumerable<SystemAirElementParameter> SerializeParameters(Document doc, ParameterSet parameterSet)
+    private static string? GetFamilyName(Element element, ElementType? elementType)
     {
-        return parameterSet
-            .Cast<Parameter>()
-            .Where(p => p.Definition is not null)
-            .OrderBy(p => p.Definition!.Name, StringComparer.OrdinalIgnoreCase)
-            .ThenBy(p => p.Id.Value)
-            .Select(p => SerializeParameter(doc, p));
-    }
-
-    private static SystemAirElementParameter SerializeParameter(Document doc, Parameter parameter)
-    {
-        object? rawValue = null;
-        string? displayValue = SafeAsValueString(parameter);
-        string? referencedElementName = null;
-
-        switch (parameter.StorageType)
+        if (elementType?.FamilyName is not null)
         {
-            case StorageType.Double:
-                rawValue = parameter.AsDouble();
-                break;
-            case StorageType.Integer:
-                rawValue = parameter.AsInteger();
-                break;
-            case StorageType.String:
-                rawValue = parameter.AsString();
-                displayValue ??= parameter.AsString();
-                break;
-            case StorageType.ElementId:
-                var elementId = parameter.AsElementId();
-                rawValue = elementId.Value;
-                if (elementId != ElementId.InvalidElementId)
-                {
-                    referencedElementName = doc.GetElement(elementId)?.Name;
-                }
-                break;
-            case StorageType.None:
-            default:
-                break;
+            return elementType.FamilyName;
         }
 
-        return new SystemAirElementParameter
+        if (element is FamilyInstance familyInstance)
         {
-            Id = parameter.Id.Value,
-            Name = parameter.Definition?.Name,
-            StorageType = parameter.StorageType.ToString(),
-            IsReadOnly = parameter.IsReadOnly,
-            IsShared = parameter.IsShared,
-            SharedGuid = SafeGetSharedGuid(parameter),
-            RawValue = rawValue,
-            DisplayValue = displayValue,
-            ReferencedElementName = referencedElementName
-        };
+            return familyInstance.Symbol?.FamilyName;
+        }
+
+        return null;
     }
 
     private static string? GetSystemName(Element element)
@@ -205,6 +175,186 @@ public sealed class SystemAirElementsExtractionService
         return null;
     }
 
+    private static string? GetLevelName(Document doc, Element element, ElementType? elementType)
+    {
+        if (element.LevelId != ElementId.InvalidElementId &&
+            doc.GetElement(element.LevelId) is Level level)
+        {
+            return level.Name;
+        }
+
+        return GetStringValue(element, elementType, names: new[] { "Reference Level", "Level" });
+    }
+
+    private static long? GetHostId(Element element)
+    {
+        if (element is FamilyInstance fi && fi.Host is not null)
+        {
+            return fi.Host.Id.Value;
+        }
+
+        return null;
+    }
+
+    private static string? GetStringValue(
+        Element element,
+        ElementType? elementType,
+        BuiltInParameter? builtInParameter = null,
+        string[]? names = null)
+    {
+        var parameter = FindParameter(element, elementType, builtInParameter, names);
+        return ReadParameterText(parameter);
+    }
+
+    private static int? GetIntegerValue(
+        Element element,
+        ElementType? elementType,
+        BuiltInParameter? builtInParameter = null,
+        params string[] names)
+    {
+        var parameter = FindParameter(element, elementType, builtInParameter, names);
+        if (parameter is null)
+        {
+            return null;
+        }
+
+        if (parameter.StorageType == StorageType.Integer)
+        {
+            return parameter.AsInteger();
+        }
+
+        if (parameter.StorageType == StorageType.Double)
+        {
+            return (int)Math.Round(parameter.AsDouble());
+        }
+
+        return null;
+    }
+
+    private static double? GetDoubleValue(
+        Element element,
+        ElementType? elementType,
+        BuiltInParameter? builtInParameter = null,
+        string[]? names = null)
+    {
+        var parameter = FindParameter(element, elementType, builtInParameter, names);
+        if (parameter is null)
+        {
+            return null;
+        }
+
+        return ReadParameterDouble(parameter);
+    }
+
+    private static double? GetLengthInMillimeters(Element element, ElementType? elementType, params string[] names)
+    {
+        return ConvertFromInternalUnits(GetDoubleValue(element, elementType, names: names), "Millimeters");
+    }
+
+    private static double? GetLengthInMeters(Element element, ElementType? elementType, params string[] names)
+    {
+        return ConvertFromInternalUnits(GetDoubleValue(element, elementType, names: names), "Meters");
+    }
+
+    private static double? GetFlowInLitersPerSecond(Element element, ElementType? elementType, params string[] names)
+    {
+        return ConvertFromInternalUnits(GetDoubleValue(element, elementType, names: names), "LitersPerSecond");
+    }
+
+    private static double? GetVelocityInMetersPerSecond(Element element, ElementType? elementType, params string[] names)
+    {
+        return ConvertFromInternalUnits(GetDoubleValue(element, elementType, names: names), "MetersPerSecond");
+    }
+
+    private static double? GetFrictionInPascalsPerMeter(Element element, ElementType? elementType, params string[] names)
+    {
+        return ConvertFromInternalUnits(GetDoubleValue(element, elementType, names: names), "PascalsPerMeter");
+    }
+
+    private static double? GetPressureInPascals(Element element, ElementType? elementType, params string[] names)
+    {
+        return ConvertFromInternalUnits(GetDoubleValue(element, elementType, names: names), "Pascals");
+    }
+
+    private static double? GetAngleInDegrees(Element element, ElementType? elementType, params string[] names)
+    {
+        return ConvertFromInternalUnits(GetDoubleValue(element, elementType, names: names), "Degrees");
+    }
+
+    private static double? ConvertFromInternalUnits(double? value, string unitTypeIdName)
+    {
+        if (value is null)
+        {
+            return null;
+        }
+
+        try
+        {
+            var unitProperty = typeof(UnitTypeId).GetProperty(unitTypeIdName, System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
+            if (unitProperty?.GetValue(null) is ForgeTypeId unitTypeId)
+            {
+                return UnitUtils.ConvertFromInternalUnits(value.Value, unitTypeId);
+            }
+        }
+        catch
+        {
+            // If conversion fails, return the internal value as fallback.
+        }
+
+        return value.Value;
+    }
+
+    private static Parameter? FindParameter(
+        Element element,
+        ElementType? elementType,
+        BuiltInParameter? builtInParameter,
+        string[]? names)
+    {
+        if (builtInParameter.HasValue)
+        {
+            var byBuiltIn = element.get_Parameter(builtInParameter.Value)
+                ?? elementType?.get_Parameter(builtInParameter.Value);
+            if (byBuiltIn is not null)
+            {
+                return byBuiltIn;
+            }
+        }
+
+        if (names is null || names.Length == 0)
+        {
+            return null;
+        }
+
+        foreach (var name in names)
+        {
+            var byName = FindByName(element, name) ?? FindByName(elementType, name);
+            if (byName is not null)
+            {
+                return byName;
+            }
+        }
+
+        return null;
+    }
+
+    private static Parameter? FindByName(Element? element, string name)
+    {
+        if (element is null)
+        {
+            return null;
+        }
+
+        foreach (var parameter in element.Parameters.Cast<Parameter>())
+        {
+            if (string.Equals(parameter.Definition?.Name, name, StringComparison.OrdinalIgnoreCase))
+            {
+                return parameter;
+            }
+        }
+
+        return null;
+    }
+
     private static string? ReadParameterText(Parameter? parameter)
     {
         if (parameter is null)
@@ -218,6 +368,19 @@ public sealed class SystemAirElementsExtractionService
         }
 
         return SafeAsValueString(parameter);
+    }
+
+    private static double? ReadParameterDouble(Parameter parameter)
+    {
+        switch (parameter.StorageType)
+        {
+            case StorageType.Double:
+                return parameter.AsDouble();
+            case StorageType.Integer:
+                return parameter.AsInteger();
+            default:
+                return null;
+        }
     }
 
     private static bool IsSystemNameParameter(string? name)
@@ -256,23 +419,6 @@ public sealed class SystemAirElementsExtractionService
         }
     }
 
-    private static string? SafeGetSharedGuid(Parameter parameter)
-    {
-        if (!parameter.IsShared)
-        {
-            return null;
-        }
-
-        try
-        {
-            return parameter.GUID.ToString();
-        }
-        catch
-        {
-            return null;
-        }
-    }
-
     private static ElementType? GetElementType(Document doc, Element element)
     {
         var typeId = element.GetTypeId();
@@ -289,7 +435,7 @@ public sealed class SystemAirElementsExtractionResult
 {
     public string RequestedSystemName { get; set; } = "";
     public SystemAirElementsExtractionSummary Summary { get; set; } = new();
-    public List<SystemAirElementItem> Items { get; set; } = new();
+    public List<SystemAirRuleElement> Items { get; set; } = new();
 }
 
 public sealed class SystemAirElementsExtractionSummary
@@ -302,40 +448,39 @@ public sealed class SystemAirElementsExtractionSummary
     public string ColorMessage { get; set; } = "";
 }
 
-public sealed class SystemAirElementItem
+public sealed class SystemAirRuleElement
 {
-    public SystemAirElementIdentity Element { get; set; } = new();
-    public SystemAirElementProperties Properties { get; set; } = new();
-}
-
-public sealed class SystemAirElementIdentity
-{
-    public long Id { get; set; }
+    // Identity + grouping + rule context
+    public long ElementId { get; set; }
     public string UniqueId { get; set; } = "";
-    public string? Name { get; set; }
-    public string? Class { get; set; }
     public string? Category { get; set; }
-    public long? CategoryId { get; set; }
+    public string? Family { get; set; }
+    public string? Type { get; set; }
     public long TypeId { get; set; }
-    public string? TypeName { get; set; }
     public string? SystemName { get; set; }
-}
+    public string? SystemType { get; set; }
+    public string? SystemClassification { get; set; }
+    public string? Level { get; set; }
+    public int? Section { get; set; }
+    public string? Mark { get; set; }
 
-public sealed class SystemAirElementProperties
-{
-    public List<SystemAirElementParameter> Instance { get; set; } = new();
-    public List<SystemAirElementParameter> Type { get; set; } = new();
-}
+    // Geometry + flow + pressure
+    public string? Size { get; set; }
+    public double? WidthMm { get; set; }
+    public double? HeightMm { get; set; }
+    public double? DiameterMm { get; set; }
+    public double? LengthM { get; set; }
+    public double? FlowLs { get; set; }
+    public double? VelocityMs { get; set; }
+    public double? FrictionPaPerM { get; set; }
+    public double? PressureDropPa { get; set; }
+    public double? LossCoefficient { get; set; }
+    public double? HydraulicDiameterMm { get; set; }
+    public double? ReynoldsNumber { get; set; }
 
-public sealed class SystemAirElementParameter
-{
-    public long Id { get; set; }
-    public string? Name { get; set; }
-    public string StorageType { get; set; } = "";
-    public bool IsReadOnly { get; set; }
-    public bool IsShared { get; set; }
-    public string? SharedGuid { get; set; }
-    public object? RawValue { get; set; }
-    public string? DisplayValue { get; set; }
-    public string? ReferencedElementName { get; set; }
+    // Fitting context
+    public string? LossMethod { get; set; }
+    public string? LossMethodSettings { get; set; }
+    public long? HostId { get; set; }
+    public double? AngleDeg { get; set; }
 }

@@ -68,7 +68,7 @@ public class RevitTools
     }
 
     [McpServerTool(Name = "extract_system_air_elements", ReadOnly = false, Idempotent = false, Destructive = false, OpenWorld = false)]
-    [Description("Extract ducts, flex ducts, air terminals, and duct fittings for a given System Name, color them blue in the active view, and save full properties to a local JSON file.")]
+    [Description("Extract ducts, flex ducts, air terminals, and duct fittings for a given System Name, color them blue in the active view, and save a compact HVAC-rule JSON schema to local disk.")]
     public async Task<object> ExtractSystemAirElements(
         [Description("Exact System Name to filter by, e.g. 'Mechanical Supply Air 17'.")]
         string systemName,
