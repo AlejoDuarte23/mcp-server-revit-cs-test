@@ -267,6 +267,9 @@ python .\scripts\test-mcp-server.py --tool get_active_document
 python .\scripts\test-mcp-server.py --tool list_walls
 python .\scripts\test-mcp-server.py --tool colorize_duct_pressure_drop --arguments "{\"topCount\":10}"
 python .\scripts\test-mcp-server.py --tool color_elements_by_id --arguments "{\"elementIds\":[12345,67890],\"red\":255,\"green\":0,\"blue\":0}"
+python .\scripts\test-mcp-server.py --tool get_low_velocity_duct_elements --arguments "{\"maxVelocityMetersPerSecond\":2.5}"
+python .\scripts\test-mcp-server.py --tool set_duct_dimensions --arguments "{\"elementIds\":[12345],\"widthMillimeters\":400,\"heightMillimeters\":200}"
+python .\scripts\test-mcp-server.py --tool set_flex_duct_diameter --arguments "{\"elementIds\":[67890],\"diameterMillimeters\":250}"
 python .\scripts\test-mcp-server.py --tool extract_system_air_elements --arguments "{\"systemName\":\"Mechanical Supply Air 17\"}"
 python .\scripts\test-mcp-server.py --tool check_zero_pressure_drop_fittings --arguments "{\"systemName\":\"Mechanical Supply Air 17\"}"
 python .\scripts\test-mcp-server.py --tool set_fitting_specific_coefficient --arguments "{\"systemName\":\"Mechanical Supply Air 17\",\"coefficient\":0.2}"
@@ -281,6 +284,9 @@ The scaffold includes these tools:
 - `list_walls`
 - `colorize_duct_pressure_drop` (write tool: applies active-view element overrides)
 - `color_elements_by_id` (write tool: colors explicit Revit element IDs in the active view using caller-provided RGB)
+- `get_low_velocity_duct_elements` (read tool: returns ducts and flex ducts below a velocity threshold in m/s)
+- `set_duct_dimensions` (write tool: sets duct width and/or height in millimeters by element ID)
+- `set_flex_duct_diameter` (write tool: sets flex duct diameter in millimeters by element ID)
 - `extract_system_air_elements` (write tool: colors matching elements blue and exports JSON to local disk)
 - `check_zero_pressure_drop_fittings` (write tool: colors zero-pressure fittings and returns element IDs)
 - `set_fitting_specific_coefficient` (write tool: sets fitting loss method to Specific Coefficient, default 0.2)

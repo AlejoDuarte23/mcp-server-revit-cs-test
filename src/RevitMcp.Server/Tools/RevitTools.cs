@@ -72,7 +72,7 @@ public class RevitTools
     [Description("Apply a caller-provided RGB color override to specific Revit elements in the active view using their Revit element IDs.")]
     public async Task<object> ColorElementsById(
         [Description("Revit element IDs to color in the active view.")]
-        IEnumerable<long> elementIds,
+        List<long> elementIds,
         [Description("Red channel value from 0 to 255.")]
         byte red,
         [Description("Green channel value from 0 to 255.")]
@@ -83,13 +83,85 @@ public class RevitTools
     {
         var request = new ColorElementsByIdRequest
         {
-            ElementIds = elementIds?.ToList() ?? new List<long>(),
+            ElementIds = elementIds ?? new List<long>(),
             Red = red,
             Green = green,
             Blue = blue
         };
 
         var response = await _bridge.InvokeAsync("color_elements_by_id", request, cancellationToken);
+        if (!response.Success)
+        {
+            throw new InvalidOperationException(response.Error);
+        }
+
+        return response.Result!;
+    }
+
+    [McpServerTool(Name = "get_low_velocity_duct_elements", ReadOnly = true, Idempotent = true, Destructive = false, OpenWorld = false)]
+    [Description("Return ducts and flex ducts whose velocity is strictly lower than the provided threshold in meters per second.")]
+    public async Task<object> GetLowVelocityDuctElements(
+        [Description("Maximum allowed velocity in meters per second.")]
+        double maxVelocityMetersPerSecond,
+        CancellationToken cancellationToken = default)
+    {
+        var request = new GetLowVelocityDuctElementsRequest
+        {
+            MaxVelocityMetersPerSecond = maxVelocityMetersPerSecond
+        };
+
+        var response = await _bridge.InvokeAsync("get_low_velocity_duct_elements", request, cancellationToken);
+        if (!response.Success)
+        {
+            throw new InvalidOperationException(response.Error);
+        }
+
+        return response.Result!;
+    }
+
+    [McpServerTool(Name = "set_duct_dimensions", ReadOnly = false, Idempotent = false, Destructive = true, OpenWorld = false)]
+    [Description("Set width and/or height in millimeters for duct elements identified by Revit element ID.")]
+    public async Task<object> SetDuctDimensions(
+        [Description("Revit element IDs for duct elements to update.")]
+        List<long> elementIds,
+        [Description("Optional width in millimeters. Provide null to leave width unchanged.")]
+        double? widthMillimeters = null,
+        [Description("Optional height in millimeters. Provide null to leave height unchanged.")]
+        double? heightMillimeters = null,
+        CancellationToken cancellationToken = default)
+    {
+        var request = new SetDuctDimensionsRequest
+        {
+            ElementIds = elementIds ?? new List<long>(),
+            WidthMillimeters = widthMillimeters,
+            HeightMillimeters = heightMillimeters
+        };
+
+        var response = await _bridge.InvokeAsync("set_duct_dimensions", request, cancellationToken);
+        if (!response.Success)
+        {
+            throw new InvalidOperationException(response.Error);
+        }
+
+        return response.Result!;
+    }
+
+    [McpServerTool(Name = "set_flex_duct_diameter", ReadOnly = false, Idempotent = false, Destructive = true, OpenWorld = false)]
+    [Description("Set diameter in millimeters for flex duct elements identified by Revit element ID.")]
+    public async Task<object> SetFlexDuctDiameter(
+        [Description("Revit element IDs for flex duct elements to update.")]
+        List<long> elementIds,
+        [Description("Diameter in millimeters.")]
+        double diameterMillimeters,
+        CancellationToken cancellationToken = default)
+    {
+        var request = new SetFlexDuctDiameterRequest
+        {
+            ElementIds = elementIds ?? new List<long>(),
+            DiameterMillimeters = diameterMillimeters
+        };
+
+        var response = await _bridge.InvokeAsync("set_flex_duct_diameter", request, cancellationToken);
         if (!response.Success)
         {
             throw new InvalidOperationException(response.Error);
